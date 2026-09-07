@@ -1,0 +1,1 @@
+# SmartBookmarkAdder_extension
