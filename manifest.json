@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Smart Bookmark Adder",
+  "version": "1.1.1",
+  "description": "Smart bookmark adder - search folder and add bookmark into it with keyboard only. Recent folders history and edit features.",
+  "permissions": [
+    "bookmarks",
+    "activeTab",
+    "tabs",
+    "storage"
+  ],
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  }
+}

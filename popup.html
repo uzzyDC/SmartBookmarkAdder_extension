@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+      width: 400px; 
+      padding: 12px; 
+      margin: 0; 
+      background: #f9f9f9; 
+      box-sizing: border-box; 
+    }
+    .section-title { font-size: 11px; font-weight: bold; color: #666; text-transform: uppercase; margin: 8px 0 4px 0; }
+    
+    /* Riga di ricerca con pulsante X */
+    .search-row { display: flex; gap: 6px; margin-bottom: 8px; }
+    .search-row input { flex: 1; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+    .btn-clear { background: #e1dfdd; border: 1px solid #ccc; border-radius: 4px; padding: 0 12px; cursor: pointer; font-size: 14px; font-weight: bold; color: #333; display: flex; align-items: center; justify-content: center; }
+    .btn-clear:hover { background: #c8c6c4; }
+
+    .chips-container { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+    .chip { background: #e1dfdd; padding: 4px 8px; border-radius: 12px; font-size: 11px; cursor: pointer; color: #333; border: 1px solid #c8c6c4; white-space: nowrap; }
+    .chip:hover { background: #c8c6c4; }
+
+    .tree-controls { display: flex; gap: 6px; margin-bottom: 4px; }
+    .btn-tree-control { background: #e1dfdd; border: none; border-radius: 3px; font-size: 10px; padding: 3px 6px; cursor: pointer; color: #333; font-weight: bold; }
+    .btn-tree-control:hover { background: #c8c6c4; }
+
+    #folderTree { max-height: 220px; overflow-y: auto; background: white; border: 1px solid #eee; border-radius: 4px; padding: 4px 0; margin-bottom: 10px; scroll-behavior: smooth; }
+    .tree-item { padding: 6px 8px; cursor: pointer; font-size: 13px; display: flex; align-items: center; word-break: break-all; }
+    .tree-item:hover { background-color: #f1f1f1; }
+    .tree-item.selected { background-color: #e5f1fb; font-weight: bold; color: #0078d4; border-left: 3px solid #0078d4; }
+    
+    /* Stile per il percorso (path) nella ricerca */
+    .folder-path { font-size: 11px; color: #777; font-weight: normal; margin-left: 6px; font-style: italic; }
+
+    .toggle-btn { background: none; border: 1px solid #ccc; border-radius: 3px; width: 16px; height: 16px; font-size: 10px; display: flex; align-items: center; justify-content: center; margin-right: 6px; cursor: pointer; padding: 0; color: #555; }
+    .toggle-placeholder { width: 16px; margin-right: 6px; display: inline-block; }
+
+    .btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; text-align: center; }
+    .btn-add { background-color: #0078d4; color: white; }
+    .btn-update { background-color: #e81123; color: white; }
+    .btn-dup { background-color: #107c41; color: white; display: none; margin-top: 6px; }
+    
+    .row { display: flex; gap: 6px; margin-bottom: 10px; }
+    .btn-sec { background-color: #f3f3f3; color: #333; border: 1px solid #ccc; padding: 6px; font-size: 11px; border-radius: 4px; cursor: pointer; }
+    input[type="text"]#bookmarkTitle, input[type="text"]#bookmarkUrl { width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+  <div class="section-title">Bookmark Details</div>
+  <input type="text" id="bookmarkTitle" placeholder="Bookmark Name">
+  <input type="text" id="bookmarkUrl" placeholder="URL">
+
+  <div class="section-title">Filter Folders</div>
+  <div class="search-row">
+    <input type="text" id="search" placeholder="Type to search, use ↑ ↓ to navigate...">
+    <button id="clearSearchBtn" class="btn-clear" title="Clear search">✕</button>
+  </div>
+  
+  <div class="section-title">Recent Folders</div>
+  <div id="recentChips" class="chips-container"></div>
+
+  <div id="treeHeader" style="display: flex; justify-content: space-between; align-items: center;">
+    <div class="section-title" style="margin-bottom: 0;">Folder Structure</div>
+    <div class="tree-controls">
+      <button id="expandAllBtn" class="btn-tree-control">Expand All</button>
+      <button id="collapseAllBtn" class="btn-tree-control">Collapse All</button>
+    </div>
+  </div>
+  <div id="folderTree"></div>
+
+  <div class="section-title">Create New Folder</div>
+  <div class="row">
+    <input type="text" id="newFolderName" placeholder="Folder name..." style="margin-bottom:0; width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+    <button id="createFolderBtn" class="btn-sec" style="white-space:nowrap;">Create</button>
+  </div>
+
+  <button id="actionBtn" class="btn btn-add">Add Bookmark</button>
+  <button id="duplicateBtn" class="btn btn-dup">Duplicate Bookmark</button>
+
+  <script src="popup.js"></script>
+</body>
+</html>
