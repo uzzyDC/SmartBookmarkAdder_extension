@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let existingBookmark = null; 
   let selectedFolderId = "1";
   let fullTreeData = [];
-  let allNodes = [];
+  let renderedNodes = [];   // Nodes rendered in the panel view
   let selectedIndex = 0;
   let collapsedIds = new Set();
 
@@ -31,16 +31,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     bookmarkTitleInput.value = currentTab.title || "";
     bookmarkUrlInput.value = currentTab.url || "";
 
-    chrome.bookmarks.search({ url: currentTab.url }, (results) => {
-      if (results && results.length > 0) {
-        existingBookmark = results[0]; // Estrae l'oggetto dall'array
-        selectedFolderId = existingBookmark.parentId;
-        bookmarkTitleInput.value = existingBookmark.title || currentTab.title;
-        actionBtn.textContent = "Update Bookmark";
-        actionBtn.className = "btn btn-update";
-        duplicateBtn.style.display = "block";
-      }
-    });
+    const results = await chrome.bookmarks.search({ url: currentTab.url });
+
+    if (results && results.length > 0) {
+      existingBookmark = results[0]; // Estrae l'oggetto dall'array
+      selectedFolderId = existingBookmark.parentId;
+      bookmarkTitleInput.value = existingBookmark.title || currentTab.title;
+      actionBtn.textContent = "Update Bookmark";
+      actionBtn.className = "btn btn-update";
+      duplicateBtn.style.display = "block";
+    }
+
   }
 
   function loadTree(query = '', maintainSelection = false) {
@@ -52,7 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function rebuildAndRender(query = '', maintainSelection = false) {
     folderTree.innerHTML = '';
-    allNodes = [];
+    renderedNodes = [];
 
     const isSearching = query.trim().length > 0;
     const lowerQuery = query.toLowerCase();
@@ -117,7 +118,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (node.title.toLowerCase().includes(lowerQuery)) {
             const computedPath = getBuildPath(node.id);
 
-            allNodes.push({
+            renderedNodes.push({
               id: node.id,
               title: node.title,
               depth: 0,
@@ -133,7 +134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           // TREE VIEW
           // Comportamento originale: nessun path.
           if (parentVisible) {
-            allNodes.push({
+            renderedNodes.push({
               id: node.id,
               title: node.title,
               depth: depth,
@@ -164,20 +165,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     fullTreeData.forEach(root => traverse(root));
 
     if (!maintainSelection) {
-      if (isSearching && allNodes.length > 0) {
+      if (isSearching && renderedNodes.length > 0) {
         const firstDirectMatchIdx =
-          allNodes.findIndex(n => n.isDirectMatch);
+          renderedNodes.findIndex(n => n.isDirectMatch);
 
         if (firstDirectMatchIdx !== -1) {
           selectedIndex = firstDirectMatchIdx;
-          selectedFolderId = allNodes[firstDirectMatchIdx].id;
+          selectedFolderId = renderedNodes[firstDirectMatchIdx].id;
         } else {
           selectedIndex = 0;
-          selectedFolderId = allNodes[0].id;
+          selectedFolderId = renderedNodes[0].id;
         }
       } else {
         const idx =
-          allNodes.findIndex(n => n.id === selectedFolderId);
+          renderedNodes.findIndex(n => n.id === selectedFolderId);
 
         selectedIndex = idx !== -1 ? idx : 0;
       }
@@ -191,7 +192,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     folderTree.innerHTML = '';
     const isSearching = searchInput.value.trim().length > 0;
 
-    allNodes.forEach((folder, index) => {
+    renderedNodes.forEach((folder, index) => {
       const div = document.createElement('div');
       const isSelected = index === selectedIndex;
       
@@ -261,7 +262,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   collapseAllBtn.addEventListener('click', () => {
-    allNodes.forEach(n => {
+    renderedNodes.forEach(n => {
       if (n.hasChildren) collapsedIds.add(n.id);
     });
     rebuildAndRender(searchInput.value, true);
@@ -286,10 +287,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
           /*
           * Trova tutti gli antenati della cartella selezionata.
-          *
-          * IMPORTANTE:
-          * includiamo anche il nodo "1", perché nel tuo codice
-          * può essere presente in collapsedIds.
+          * IMPORTANTE: * includiamo anche il nodo "1", perché nel tuo codice può essere presente in collapsedIds.
           */
           function findParentPath(nodes, targetId, parents = []) {
             for (const node of nodes) {
@@ -336,30 +334,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
           }
 
-          /*
-          * Espandiamo SOLO gli antenati necessari.
-          *
-          * Non tocchiamo nessun altro ramo dell'albero.
-          */
+          /* Espandiamo SOLO gli antenati necessari.
+          * Non tocchiamo nessun altro ramo dell'albero. */
           parentPath.forEach(parentId => {
             collapsedIds.delete(parentId);
           });
 
-          /*
-          * Torniamo alla Tree View.
-          */
+          /* * Torniamo alla Tree View. */
           searchInput.value = '';
 
-          /*
-          * Ricostruisce l'albero con i parent appena espansi.
-          */
+          /* * Ricostruisce l'albero con i parent appena espansi. */
           rebuildAndRender('', true);
 
-          /*
-          * A questo punto la cartella dovrebbe essere
-          * presente tra gli elementi visibili.
-          */
-          const index = allNodes.findIndex(
+          /* * A questo punto la cartella dovrebbe essere presente tra gli elementi visibili. */
+          const index = renderedNodes.findIndex(
             node => node.id === targetId
           );
 
@@ -382,7 +370,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     chrome.storage.local.get({ recents: [] }, (data) => {
       let list = data.recents.filter(f => f.id !== id);
       list.unshift({ id, title });
-      if (list.length > 4) list.pop();
+      if (list.length > 6) list.pop();
       chrome.storage.local.set({ recents: list }, () => {
         loadRecents();
       });
@@ -390,7 +378,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function executeSave() {
-    if (!currentTab || allNodes.length === 0) return;
+    if (!currentTab || renderedNodes.length === 0) return;
 
     const userTitle = bookmarkTitleInput.value.trim() || currentTab.title;
     const userUrl = bookmarkUrlInput.value.trim() || currentTab.url;
@@ -417,7 +405,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   
   function executeDuplicate() {
-    if (!currentTab || allNodes.length === 0) return;
+    if (!currentTab || renderedNodes.length === 0) return;
     const userTitle = bookmarkTitleInput.value.trim() || currentTab.title;
     const userUrl = bookmarkUrlInput.value.trim() || currentTab.url;
     const finalize = () => {
@@ -448,14 +436,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   duplicateBtn.addEventListener('click', executeDuplicate);
   searchInput.addEventListener('input', (e) => rebuildAndRender(e.target.value, false));
   searchInput.addEventListener('keydown', (e) => {
-    if (allNodes.length === 0) return;
+    if (renderedNodes.length === 0) return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      selectedIndex = (selectedIndex + 1) % allNodes.length;
-      selectedFolderId = allNodes[selectedIndex].id;
+      selectedIndex = (selectedIndex + 1) % renderedNodes.length;
+      selectedFolderId = renderedNodes[selectedIndex].id;
       renderTree();
     } else if (e.key === 'ArrowUp'){
-      e.preventDefault();selectedIndex = (selectedIndex - 1 + allNodes.length) % allNodes.length;selectedFolderId = allNodes[selectedIndex].id;
+      e.preventDefault();selectedIndex = (selectedIndex - 1 + renderedNodes.length) % renderedNodes.length;selectedFolderId = renderedNodes[selectedIndex].id;
       renderTree();
     } else if (e.key === 'Enter'){
       e.preventDefault();
