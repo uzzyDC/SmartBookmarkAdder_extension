@@ -1,16 +1,16 @@
 # SmartBookmarkAdder_extension
 
-Add bookmarks to folder, by searching folder by name, or browsing. 
-* keyboard only operation is possible. 
-* Mobile browsers compatible. 
-* Latest used folders chips in quack panel.
-* Choose between duplicate or move the bookmark, if it's already in your bookmarks.
+Add bookmarks to a specific folder, browsing the folder tree or searching the folder by name.
+* Extension supports keyboard only operation.
+* Easly select recent folders, shown as chips in a quick panel, to quickly add current page to them.
+* In case the current page is already in your bookmarks, choose between duplicate it or move it to the selected folder.
+* Mobile browsers compatible (chromium based).
 
 ### Add Bookmarks:
-This extension enables higher productivity, allowing the quick addition of bookmarks in 3 main ways:
-- search the desired folder by name, and add the current page to it through keyboard only operation.
-- select one of the most recent folders to instantly jump to it: recent folders are displayed as chips on top of the folder tree view.
-- manually select the folder in the tree view, expanding or reducing all branches through quick buttons.
+This extension enables enhanced productivity, allowing the quick addition of bookmarks in 3 main ways:
+- add the current page to the selected folder searching the desired folder by name through keyboard only operation.
+- select one of the most recent folders to instantly jump to it and add current page.
+- manually select the folder in the tree view, expanding or reducing all branches through quick buttons or keyboard operation.
 
 ### Features highlight:
 - Quickly add or update current tab's bookmark folder using keyboard only.
