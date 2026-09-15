@@ -491,6 +491,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (e.key === 'Enter'){
       e.preventDefault();
       executeSave();
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      const selectedNode = renderedNodes[selectedIndex];
+      if (selectedNode?.hasChildren) {
+        selectedFolderId = selectedNode.id;
+        expandedIds.add(selectedNode.id);
+        rebuildAndRender(searchInput.value, true);
+        //scrollToSelectedFolder('expand');
+      }
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const selectedNode = renderedNodes[selectedIndex];
+      if (selectedNode?.hasChildren) {
+        selectedFolderId = selectedNode.id;
+        expandedIds.delete(selectedNode.id);
+        rebuildAndRender(searchInput.value, true);
+        // scrollToSelectedFolder('collapse');
+      }
     }
   });
 
