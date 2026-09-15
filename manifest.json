@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Smart Bookmark Adder",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Smart bookmark adder - search folder and add bookmark into it with keyboard only. Recent folders history and edit features.",
   "permissions": [
     "bookmarks",

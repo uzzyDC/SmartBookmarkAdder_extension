@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let fullTreeData = [];
   let renderedNodes = [];   // Nodes rendered in the panel view
   let selectedIndex = 0;
-  let collapsedIds = new Set();
+  let expandedIds = new Set();
 
   setTimeout(() => { searchInput.focus(); }, 50);
 
@@ -44,11 +44,56 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   }
 
-  function loadTree(query = '', maintainSelection = false) {
+  function loadTree( query = '', maintainSelection = false, initialize = false) 
+  {
     chrome.bookmarks.getTree((itemTree) => {
       fullTreeData = itemTree;
-      rebuildAndRender(query, maintainSelection);
+      if (initialize) {
+        initializeTreeView();
+      } else {
+        rebuildAndRender(query, maintainSelection);
+      }
     });
+  }
+
+
+  function initializeTreeView() {
+    expandedIds.clear();
+
+    // Already bookmarked:
+    // expand only the branch leading to the current bookmark folder.
+    if (existingBookmark) {
+      const parentPath = findParentPath(
+        fullTreeData,
+        existingBookmark.parentId
+      );
+
+      if (parentPath) {
+        parentPath.forEach(parentId => {
+          expandedIds.add(parentId);
+        });
+      }
+
+      rebuildAndRender('', false);
+      return;
+    }
+
+    // Not bookmarked:
+    // progressively expand folders until the tree needs scrolling.
+    const expandableFolders = getExpandableFolders(fullTreeData);
+
+    for (const folder of expandableFolders) {
+      expandedIds.add(folder.id);
+
+      rebuildAndRender('', false);
+
+      if (folderTree.scrollHeight > folderTree.clientHeight) {
+        break;
+      }
+    }
+
+    // Make sure the final rendering reflects the selected folder.
+    rebuildAndRender('', false);
   }
 
   function rebuildAndRender(query = '', maintainSelection = false) {
@@ -123,23 +168,21 @@ document.addEventListener('DOMContentLoaded', async () => {
               title: node.title,
               depth: 0,
               hasChildren: hasChildren,
-              isCollapsed: false,
+              isExpanded: false,
               isDirectMatch: true,
               pathString: computedPath ? `(${computedPath})` : ''
             });
           }
 
         } else {
-
-          // TREE VIEW
-          // Comportamento originale: nessun path.
+          // TREE VIEW (nessun path mostrato accanto ai bookmark)
           if (parentVisible) {
             renderedNodes.push({
               id: node.id,
               title: node.title,
               depth: depth,
               hasChildren: hasChildren,
-              isCollapsed: collapsedIds.has(node.id),
+              isExpanded: expandedIds.has(node.id),
               isDirectMatch: false,
               pathString: ''
             });
@@ -148,9 +191,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       if (node.children) {
-        const shouldTraverseChildren =
-          isSearching ||
-          !collapsedIds.has(node.id);
+        const shouldTraverseChildren = node.id === "0" || isSearching || expandedIds.has(node.id);
 
         node.children.forEach(child => {
           traverse(
@@ -187,6 +228,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderTree();
   }
 
+    /* * Trova tutti gli antenati della cartella selezionata.
+  * IMPORTANTE: * includiamo anche il nodo "1", perché nel tuo codice può essere presente in collapsedIds. */
+  function findParentPath(nodes, targetId, parents = []) {
+    for (const node of nodes) {
+
+      // Abbiamo trovato la cartella cercata
+      if (node.id === targetId) {
+        return parents;
+      }
+
+      if (node.children) {
+        // Tutti i nodi tranne "0" possono essere stati // aggiunti a collapsedIds dalla tua Tree View.
+        const nextParents = node.id === "0" ? parents : [...parents, node.id];
+        const result = findParentPath( node.children, targetId, nextParents );
+
+        if (result !== null) {
+          return result;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  function getExpandableFolders(nodes, result = []) {
+    for (const node of nodes) {
+      const isFolder = node.id !== "0" && !node.url && node.children && node.children.some(child => !child.url);
+      if (isFolder) 
+        { result.push(node); }
+      if (node.children) 
+        { getExpandableFolders(node.children, result); }
+    }
+
+    return result;
+  }
 
   function renderTree() {
     folderTree.innerHTML = '';
@@ -206,14 +282,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!isSearching && folder.hasChildren) {
         const tBtn = document.createElement('button');
         tBtn.className = 'toggle-btn';
-        tBtn.textContent = folder.isCollapsed ? '+' : '-';
+        tBtn.textContent = folder.isExpanded ? '-' : '+';
+
         tBtn.addEventListener('click', (ev) => {
           ev.stopPropagation();
-          if (collapsedIds.has(folder.id)) {
-            collapsedIds.delete(folder.id);
+
+          if (expandedIds.has(folder.id)) {
+            expandedIds.delete(folder.id);
           } else {
-            collapsedIds.add(folder.id);
+            expandedIds.add(folder.id);
           }
+
           rebuildAndRender(searchInput.value, true);
         });
         div.appendChild(tBtn);
@@ -256,15 +335,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   expandAllBtn.addEventListener('click', () => {
-    collapsedIds.clear();
+    expandedIds.clear();
+
+    const expandableFolders = getExpandableFolders(fullTreeData);
+    expandableFolders.forEach(folder => {
+      expandedIds.add(folder.id);
+    });
+
     rebuildAndRender(searchInput.value, true);
     searchInput.focus();
   });
 
   collapseAllBtn.addEventListener('click', () => {
-    renderedNodes.forEach(n => {
-      if (n.hasChildren) collapsedIds.add(n.id);
-    });
+    expandedIds.clear();
     rebuildAndRender(searchInput.value, true);
     searchInput.focus();
   });
@@ -284,43 +367,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
         chip.addEventListener('click', () => {
           const targetId = item.id;
-
-          /*
-          * Trova tutti gli antenati della cartella selezionata.
-          * IMPORTANTE: * includiamo anche il nodo "1", perché nel tuo codice può essere presente in collapsedIds.
-          */
-          function findParentPath(nodes, targetId, parents = []) {
-            for (const node of nodes) {
-
-              // Abbiamo trovato la cartella cercata
-              if (node.id === targetId) {
-                return parents;
-              }
-
-              if (node.children) {
-
-                // Tutti i nodi tranne "0" possono essere stati
-                // aggiunti a collapsedIds dalla tua Tree View.
-                const nextParents =
-                  node.id === "0"
-                    ? parents
-                    : [...parents, node.id];
-
-                const result = findParentPath(
-                  node.children,
-                  targetId,
-                  nextParents
-                );
-
-                if (result !== null) {
-                  return result;
-                }
-              }
-            }
-
-            return null;
-          }
-
           const parentPath = findParentPath(
             fullTreeData,
             targetId
@@ -334,11 +380,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
           }
 
-          /* Espandiamo SOLO gli antenati necessari.
-          * Non tocchiamo nessun altro ramo dell'albero. */
-          parentPath.forEach(parentId => {
-            collapsedIds.delete(parentId);
-          });
+          /* Espandiamo SOLO gli antenati necessari. Non tocchiamo nessun altro ramo dell'albero. */
+          parentPath.forEach(parentId => { expandedIds.add(parentId); });
 
           /* * Torniamo alla Tree View. */
           searchInput.value = '';
@@ -450,6 +493,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       executeSave();
     }
   });
-  loadTree();
+
+  loadTree('', false, true);
   loadRecents();
+
+
 });
